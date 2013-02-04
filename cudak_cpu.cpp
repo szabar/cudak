@@ -18,6 +18,7 @@
 #include "cuda.h"
 #include "common.h"
 #include <boost/program_options.hpp>
+namespace po = boost::program_options;
 
 using namespace std;
 
@@ -38,11 +39,15 @@ void init() {
     wxInitAllImageHandlers();
 }
 
-wxImage getImage(const wchar_t * path ){
-    return wxImage (wxString(path));
+wxString toWxString(const string & s){
+    return wxString(s.c_str(), wxConvUTF8);
 }
 
-void save_bitmap(unsigned char * bitmap, const wxString path, int width, int height){
+wxImage getImage(const string & path){
+    return wxImage (toWxString(path));
+}
+
+void save_bitmap(unsigned char * bitmap, const string & output_path, int width, int height){
     wxImage image;
     image.Create(width, height, false);
     unsigned char * out = image.GetData();
@@ -55,10 +60,10 @@ void save_bitmap(unsigned char * bitmap, const wxString path, int width, int hei
         out[i] = bitmap[i];
     }
     printf("dupa\n");
-    image.SaveFile(path);
+    image.SaveFile(toWxString(output_path));
 }
 
-int run(){
+void run(const string & input_path, const string & output_path){
     init();
     printf("device initialization\n");
 
@@ -76,7 +81,7 @@ int run(){
 
     printf("data initialization\n");
     
-    wxImage image = getImage(L"./mis.jpg");
+    wxImage image = getImage(input_path);
     int w = image.GetWidth();
     int h = image.GetHeight();
 
@@ -98,9 +103,22 @@ int run(){
     CHECK( cuMemAllocHost((void**)(&out), 3 * w * h) );
     CHECK( cuMemcpyDtoH(out, dev_out, 3 * w * h) );
 
-    save_bitmap(out, L"./out.jpg", w, h);
+    save_bitmap(out, output_path, w, h);
 }
 
-int main() {
-    run();
+int main(int argc, char * argv[]) {
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help", "produce help message")
+        ("input-path,I", po::value<string> (), "set input file path")
+        ("output-path,o", po::value<string> (), "Place the output into <file>");
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    cout << "-I " << vm["input-path"].as<string>() << endl;
+    string input_path = vm["input-path"].as<string>();
+    string output_path = vm["output-path"].as<string>();
+    return 0;
+    run(input_path, output_path);
 }
