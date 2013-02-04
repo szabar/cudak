@@ -34,7 +34,23 @@ do { \
     if(res!=CUDA_SUCCESS){printf("ASSERTION FAILED: line %d, res = %d\n", __LINE__, res); exit(1);} \
 } while(0)
 
-void init() {
+class Cuda {
+    public:
+        CUfunction * raytracing_f;
+        void init(){
+            printf("device initialization\n");
+            CHECK( cuInit(0) );
+            CUdevice cudaDevice;
+            CUcontext cudaContext;
+            CUmodule module;
+            CHECK(cuDeviceGet(&cudaDevice, 0) );
+            CHECK(cuCtxCreate(&cudaContext, CU_CTX_SCHED_SPIN | CU_CTX_MAP_HOST, cudaDevice) );
+            CHECK(cuModuleLoad(&module, "__cudak_gpu.ptx") );
+            CHECK(cuModuleGetFunction(raytracing_f, module, "black_and_white") );
+        }
+};
+
+void wxInit() {
     wxInitialize();
     wxInitAllImageHandlers();
 }
@@ -55,7 +71,6 @@ void save_bitmap(unsigned char * bitmap, const string & output_path, int width, 
 
     int inIdx = 0;
 
-    printf("dupa\n");
     for (int i = 0; i < width*height*3; ++i) {
         out[i] = bitmap[i];
     }
@@ -64,23 +79,10 @@ void save_bitmap(unsigned char * bitmap, const string & output_path, int width, 
 }
 
 void run(const string & input_path, const string & output_path){
-    init();
-    printf("device initialization\n");
+    wxInit();
+    Cuda cuda;
+    cuda.init();
 
-    CHECK( cuInit(0) );
-
-    CUdevice cudaDevice;
-    CUcontext cudaContext;
-    CUmodule module;
-    CUfunction raytracing_f;
-
-    CHECK( cuDeviceGet(&cudaDevice, 0) );
-    CHECK( cuCtxCreate(&cudaContext, CU_CTX_SCHED_SPIN | CU_CTX_MAP_HOST, cudaDevice) );
-    CHECK( cuModuleLoad(&module, "__cudak_gpu.ptx") );
-    CHECK( cuModuleGetFunction(&raytracing_f, module, "black_and_white") );
-
-    printf("data initialization\n");
-    
     wxImage image = getImage(input_path);
     int w = image.GetWidth();
     int h = image.GetHeight();
@@ -96,7 +98,7 @@ void run(const string & input_path, const string & output_path){
 
     void * args[] = {&dev_in, &dev_out, &w, &h};
     
-    CHECK( cuLaunchKernel(raytracing_f, w, h, 1,    1, 1    , 1, 0, NULL, args, NULL) );
+    CHECK( cuLaunchKernel(*cuda.raytracing_f, w, h, 1,    1, 1    , 1, 0, NULL, args, NULL) );
     cuCtxSynchronize();
 
     unsigned char *out;// = new unsigned char[3 * w * h];
@@ -119,6 +121,6 @@ int main(int argc, char * argv[]) {
     cout << "-I " << vm["input-path"].as<string>() << endl;
     string input_path = vm["input-path"].as<string>();
     string output_path = vm["output-path"].as<string>();
-    return 0;
+//return 0;
     run(input_path, output_path);
 }
