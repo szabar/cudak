@@ -113,7 +113,8 @@ int main(int argc, char * argv[]) {
     desc.add_options()
         ("help", "produce help message")
         ("input-path,I", po::value<string> (), "set input file path")
-        ("output-path,o", po::value<string> (), "Place the output into <file>");
+        ("output-path,o", po::value<string> (), "Place the output into <file>")
+        ("black-and-white,b", "make image black and white");
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
@@ -122,5 +123,7 @@ int main(int argc, char * argv[]) {
     string input_path = vm["input-path"].as<string>();
     string output_path = vm["output-path"].as<string>();
 //return 0;
-    run(input_path, output_path);
+    if(vm.count("black-and-white")){
+        run(input_path, output_path);
+    }
 }
