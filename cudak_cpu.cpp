@@ -35,18 +35,22 @@ do { \
 } while(0)
 
 class Cuda {
+    private:
+        CUdevice device;
+        CUcontext context;
+        CUmodule module;
     public:
-        CUfunction * raytracing_f;
+        CUfunction raytracing_f;
+        CUdeviceptr in;
+        CUdeviceptr out;
         void init(){
             printf("device initialization\n");
             CHECK( cuInit(0) );
-            CUdevice cudaDevice;
-            CUcontext cudaContext;
-            CUmodule module;
-            CHECK(cuDeviceGet(&cudaDevice, 0) );
-            CHECK(cuCtxCreate(&cudaContext, CU_CTX_SCHED_SPIN | CU_CTX_MAP_HOST, cudaDevice) );
+            CHECK(cuDeviceGet(&device, 0) );
+            CHECK(cuCtxCreate(&context, CU_CTX_SCHED_SPIN | CU_CTX_MAP_HOST, device) );
             CHECK(cuModuleLoad(&module, "__cudak_gpu.ptx") );
-            CHECK(cuModuleGetFunction(raytracing_f, module, "black_and_white") );
+            CHECK(cuModuleGetFunction(&raytracing_f, module, "black_and_white") );
+            printf("device initialization succeeded\n");
         }
 };
 
@@ -78,37 +82,17 @@ void save_bitmap(unsigned char * bitmap, const string & output_path, int width, 
     image.SaveFile(toWxString(output_path));
 }
 
-void run(const string & input_path, const string & output_path){
+void black_and_white(Cuda & cuda, int w, int h){
+    void * args[] = {&cuda.in, &cuda.out, &w, &h};
+    CHECK( cuLaunchKernel(cuda.raytracing_f, w, h, 1,    1, 1    , 1, 0, NULL, args, NULL) );
+    cuCtxSynchronize();
+}
+
+int main(int argc, char * argv[]) {
     wxInit();
     Cuda cuda;
     cuda.init();
 
-    wxImage image = getImage(input_path);
-    int w = image.GetWidth();
-    int h = image.GetHeight();
-
-    printf("w = %d, h = %d\n", w, h);
-
-    CUdeviceptr dev_in;
-    CHECK( cuMemAlloc(&dev_in, 3*w*h) );
-    CHECK( cuMemcpyHtoD(dev_in, image.GetData(), 3*w*h) );
-
-    CUdeviceptr dev_out;
-    CHECK(cuMemAlloc(&dev_out, 3*w*h));
-
-    void * args[] = {&dev_in, &dev_out, &w, &h};
-    
-    CHECK( cuLaunchKernel(*cuda.raytracing_f, w, h, 1,    1, 1    , 1, 0, NULL, args, NULL) );
-    cuCtxSynchronize();
-
-    unsigned char *out;// = new unsigned char[3 * w * h];
-    CHECK( cuMemAllocHost((void**)(&out), 3 * w * h) );
-    CHECK( cuMemcpyDtoH(out, dev_out, 3 * w * h) );
-
-    save_bitmap(out, output_path, w, h);
-}
-
-int main(int argc, char * argv[]) {
     po::options_description desc("Allowed options");
     desc.add_options()
         ("help", "produce help message")
@@ -119,11 +103,24 @@ int main(int argc, char * argv[]) {
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
-    cout << "-I " << vm["input-path"].as<string>() << endl;
+//     "-I " << vm["input-path"].as<string>() << endl;
     string input_path = vm["input-path"].as<string>();
     string output_path = vm["output-path"].as<string>();
 //return 0;
+    wxImage image = getImage(input_path);
+    int w = image.GetWidth();
+    int h = image.GetHeight();
+    CHECK(cuMemAlloc(&cuda.in, 3*w*h));
+    CHECK(cuMemcpyHtoD(cuda.in, image.GetData(), 3*w*h));
+    CHECK(cuMemAlloc(&cuda.out, 3*w*h));
+
     if(vm.count("black-and-white")){
-        run(input_path, output_path);
+        cout << "bw " << w << " " << h << endl;
+        black_and_white(cuda, w, h);
     }
+    
+    unsigned char *out;// = new unsigned char[3 * w * h];
+    CHECK( cuMemAllocHost((void**)(&out), 3 * w * h) );
+    CHECK( cuMemcpyDtoH(out, cuda.out, 3 * w * h) );
+    save_bitmap(out, output_path, w, h);
 }

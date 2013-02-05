@@ -7,11 +7,11 @@ extern "C" {
         int x = threadIdx.x + blockIdx.x * blockDim.x;
         int y = threadIdx.y + blockIdx.y * blockDim.y;
         int idx = 3 * (y * w + x);
-        int baw = (in[idx] + in[idx+1] + in[idx+2]) / 3;
+        int bw = (in[idx] + in[idx+1] + in[idx+2]) / 3;
         if(idx < 3 * w * h){
-            out[idx++] = baw;
-            out[idx++] = baw;
-            out[idx++] = baw;
+            out[idx++] = bw;
+            out[idx++] = bw;
+            out[idx++] = bw;
         }
     }
 
