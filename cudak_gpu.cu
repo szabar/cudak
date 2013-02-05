@@ -3,7 +3,7 @@
 
 extern "C" {
 
-    __global__ void black_and_white(unsigned char * in, unsigned char * out, int w, int h){
+    __global__ void black_and_white(float * in, float * out, int w, int h){
         int x = threadIdx.x + blockIdx.x * blockDim.x;
         int y = threadIdx.y + blockIdx.y * blockDim.y;
         int idx = 3 * (y * w + x);
@@ -14,6 +14,8 @@ extern "C" {
             out[idx++] = bw;
         }
     }
+
+//    __global__ void contrast(float * in, 
 
     __global__ void transform(unsigned char * in, unsigned char * out, int w, int h){
         int x = threadIdx.x + blockIdx.x * blockDim.x;

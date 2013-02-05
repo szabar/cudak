@@ -67,7 +67,7 @@ wxImage getImage(const string & path){
     return wxImage (toWxString(path));
 }
 
-void save_bitmap(unsigned char * bitmap, const string & output_path, int width, int height){
+void save_bitmap(float * bitmap, const string & output_path, int width, int height){
     wxImage image;
     image.Create(width, height, false);
     unsigned char * out = image.GetData();
@@ -76,7 +76,7 @@ void save_bitmap(unsigned char * bitmap, const string & output_path, int width, 
     int inIdx = 0;
 
     for (int i = 0; i < width*height*3; ++i) {
-        out[i] = bitmap[i];
+        out[i] = bitmap[i] * 255;
     }
     printf("dupa\n");
     image.SaveFile(toWxString(output_path));
@@ -110,17 +110,22 @@ int main(int argc, char * argv[]) {
     wxImage image = getImage(input_path);
     int w = image.GetWidth();
     int h = image.GetHeight();
-    CHECK(cuMemAlloc(&cuda.in, 3*w*h));
-    CHECK(cuMemcpyHtoD(cuda.in, image.GetData(), 3*w*h));
-    CHECK(cuMemAlloc(&cuda.out, 3*w*h));
+    CHECK(cuMemAlloc(&cuda.in, sizeof(float) * 3*w*h));
+    float * bitmap = new float[3 * w * h];
+    for(int i = 0; i < 3*w*h; ++i){
+        bitmap[i] = (image.GetData()[i] * (1.0)) / (255.0);
+    }
+    CHECK(cuMemcpyHtoD(cuda.in, bitmap, sizeof(float) * 3*w*h));
+    CHECK(cuMemAlloc(&cuda.out, sizeof(float) * 3*w*h));
 
     if(vm.count("black-and-white")){
         cout << "bw " << w << " " << h << endl;
         black_and_white(cuda, w, h);
     }
     
-    unsigned char *out;// = new unsigned char[3 * w * h];
-    CHECK( cuMemAllocHost((void**)(&out), 3 * w * h) );
-    CHECK( cuMemcpyDtoH(out, cuda.out, 3 * w * h) );
+    float *out;// = new unsigned char[3 * w * h];
+    CHECK( cuMemAllocHost((void**)(&out), sizeof(float) * 3 * w * h) );
+    CHECK( cuMemcpyDtoH(out, cuda.out, sizeof(float) * 3 * w * h) );
+    printf("dupa dupa\n");
     save_bitmap(out, output_path, w, h);
 }
