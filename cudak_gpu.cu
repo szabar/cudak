@@ -14,8 +14,25 @@ extern "C" {
             out[idx++] = bw;
         }
     }
+/*
+    __device__ float normalize(float f){
+        if(f > 1) return 1;
+        if(f < 0) return 0;
+        return f;
+    }
 
-//    __global__ void contrast(float * in, 
+    __global__ void contrast(float * in, float * out, int w, int h, int C, int B){
+        int x = threadIdx.x + blockIdx.x * blockDim.x;
+        int y = threadIdx.y + blockIdx.y * blockDim.y;
+        float Cf = (C * 1.0) / 255;
+        float Bf = (B * 1.0) / 255;
+        int idx = 3 * (y * w + x);
+        if(idx < 3 * w * h){
+            out[idx] = normalize(in[idx] - Cf / (Bf - Cf));idx++;
+            out[idx] = normalize(in[idx] - Cf / (Bf - Cf));idx++;
+            out[idx] = normalize(in[idx] - Cf / (Bf - Cf));idx++;
+        }
+    }
 
     __global__ void transform(unsigned char * in, unsigned char * out, int w, int h){
         int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -37,4 +54,5 @@ extern "C" {
             out[idx_end++] = in[idx_start++];
         }
     }
+*/
 }

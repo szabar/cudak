@@ -34,13 +34,17 @@ do { \
     if(res!=CUDA_SUCCESS){printf("ASSERTION FAILED: line %d, res = %d\n", __LINE__, res); exit(1);} \
 } while(0)
 
+const int BLACK_AND_WHITE = 0;
+const int CONTRAST = 1;
+
 class Cuda {
     private:
         CUdevice device;
         CUcontext context;
         CUmodule module;
     public:
-        CUfunction raytracing_f;
+//        vector<CUfunction> t;
+        CUfunction dupa;
         CUdeviceptr in;
         CUdeviceptr out;
         void init(){
@@ -49,7 +53,10 @@ class Cuda {
             CHECK(cuDeviceGet(&device, 0) );
             CHECK(cuCtxCreate(&context, CU_CTX_SCHED_SPIN | CU_CTX_MAP_HOST, device) );
             CHECK(cuModuleLoad(&module, "__cudak_gpu.ptx") );
-            CHECK(cuModuleGetFunction(&raytracing_f, module, "black_and_white") );
+//            t.resize(2);
+//            CHECK(cuModuleGetFunction(&t[BLACK_AND_WHITE], module, "black_and_white"));
+            CHECK(cuModuleGetFunction(&dupa, module, "black_and_white"));
+//            CHECK(cuModuleGetFunction(&t[CONTRAST], module, "contrast"));
             printf("device initialization succeeded\n");
         }
 };
@@ -84,10 +91,17 @@ void save_bitmap(float * bitmap, const string & output_path, int width, int heig
 
 void black_and_white(Cuda & cuda, int w, int h){
     void * args[] = {&cuda.in, &cuda.out, &w, &h};
-    CHECK( cuLaunchKernel(cuda.raytracing_f, w, h, 1,    1, 1    , 1, 0, NULL, args, NULL) );
+//    CHECK(cuLaunchKernel(cuda.t[BLACK_AND_WHITE], w, h, 1,    1, 1    , 1, 0, NULL, args, NULL));
+    CHECK(cuLaunchKernel(cuda.dupa, w, h, 1,    1, 1    , 1, 0, NULL, args, NULL));
     cuCtxSynchronize();
 }
-
+/*
+void contrast(Cuda & cuda, int w, int h, int C, int B){
+    void * args[] = {&cuda.in, &cuda.out, &w, &h, &C, &B};
+    CHECK(cuLaunchKernel(cuda.t[CONTRAST], w, h, 1,    1, 1    , 1, 0, NULL, args, NULL));
+    cuCtxSynchronize();
+}
+*/
 int main(int argc, char * argv[]) {
     wxInit();
     Cuda cuda;
@@ -98,7 +112,10 @@ int main(int argc, char * argv[]) {
         ("help", "produce help message")
         ("input-path,I", po::value<string> (), "set input file path")
         ("output-path,o", po::value<string> (), "Place the output into <file>")
-        ("black-and-white,b", "make image black and white");
+        ("black-and-white,b", "make image black and white")
+        ("contrast-black", po::value<int> (), "")
+        ("contrast-white", po::value<int> (), "")
+        ;
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
@@ -122,10 +139,14 @@ int main(int argc, char * argv[]) {
         cout << "bw " << w << " " << h << endl;
         black_and_white(cuda, w, h);
     }
+    if(vm.count("contrast-black") || vm.count("contrast-white")){
+        cout << "abcabc" << vm.count("contrast-black") << endl;
+//        contrast(cuda, w, h, vm["contrast-black"].as<int>(), vm["contrast-white"].as<int>());
+    }
     
     float *out;// = new unsigned char[3 * w * h];
-    CHECK( cuMemAllocHost((void**)(&out), sizeof(float) * 3 * w * h) );
-    CHECK( cuMemcpyDtoH(out, cuda.out, sizeof(float) * 3 * w * h) );
+    CHECK(cuMemAllocHost((void**)(&out), sizeof(float) * 3 * w * h));
+    CHECK(cuMemcpyDtoH(out, cuda.out, sizeof(float) * 3 * w * h));
     printf("dupa dupa\n");
     save_bitmap(out, output_path, w, h);
 }
