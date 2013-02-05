@@ -1,8 +1,9 @@
 # CUDA_PROFILE_LOG_VERSION 2.0
 # CUDA_DEVICE 0 Tesla C2050
 # CUDA_CONTEXT 1
-# TIMESTAMPFACTOR fffff6a113aa8450
+# TIMESTAMPFACTOR fffff6a1151ceeb0
 method,gputime,cputime,occupancy
-method=[ memcpyHtoD ] gputime=[ 280.064 ] cputime=[ 563.000 ] 
-method=[ black_and_white ] gputime=[ 1356.384 ] cputime=[ 15.000 ] occupancy=[ 0.167 ] 
-method=[ memcpyDtoH ] gputime=[ 217.664 ] cputime=[ 305.000 ] 
+method=[ memcpyHtoD ] gputime=[ 328.800 ] cputime=[ 739.000 ] 
+method=[ black_and_white ] gputime=[ 1290.240 ] cputime=[ 21.000 ] occupancy=[ 0.167 ] 
+method=[ contrast ] gputime=[ 3452.096 ] cputime=[ 12.000 ] occupancy=[ 0.167 ] 
+method=[ memcpyDtoH ] gputime=[ 219.456 ] cputime=[ 325.000 ] 

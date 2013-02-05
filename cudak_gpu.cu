@@ -3,34 +3,34 @@
 
 extern "C" {
 
-    __global__ void black_and_white(float * in, float * out, int w, int h){
+    __global__ void black_and_white(float * bitmap, int w, int h){
         int x = threadIdx.x + blockIdx.x * blockDim.x;
         int y = threadIdx.y + blockIdx.y * blockDim.y;
         int idx = 3 * (y * w + x);
-        float bw = (in[idx] + in[idx+1] + in[idx+2]) / 3;
+        float bw = (bitmap[idx] + bitmap[idx+1] + bitmap[idx+2]) / 3;
         if(idx < 3 * w * h){
-            out[idx++] = bw;
-            out[idx++] = bw;
-            out[idx++] = bw;
+            bitmap[idx++] = bw;
+            bitmap[idx++] = bw;
+            bitmap[idx++] = bw;
         }
     }
-/*
+
     __device__ float normalize(float f){
         if(f > 1) return 1;
         if(f < 0) return 0;
         return f;
     }
 
-    __global__ void contrast(float * in, float * out, int w, int h, int C, int B){
+    __global__ void contrast(float * bitmap, int w, int h, int C, int B){
         int x = threadIdx.x + blockIdx.x * blockDim.x;
         int y = threadIdx.y + blockIdx.y * blockDim.y;
-        float Cf = (C * 1.0) / 255;
-        float Bf = (B * 1.0) / 255;
+        float Cf = (C * 1.0) / 255.0;
+        float Bf = (B * 1.0) / 255.0;
         int idx = 3 * (y * w + x);
         if(idx < 3 * w * h){
-            out[idx] = normalize(in[idx] - Cf / (Bf - Cf));idx++;
-            out[idx] = normalize(in[idx] - Cf / (Bf - Cf));idx++;
-            out[idx] = normalize(in[idx] - Cf / (Bf - Cf));idx++;
+            bitmap[idx] = normalize((bitmap[idx] - Cf) / (Bf - Cf));idx++;
+            bitmap[idx] = normalize((bitmap[idx] - Cf) / (Bf - Cf));idx++;
+            bitmap[idx] = normalize((bitmap[idx] - Cf) / (Bf - Cf));idx++;
         }
     }
 
@@ -54,5 +54,5 @@ extern "C" {
             out[idx_end++] = in[idx_start++];
         }
     }
-*/
+
 }
